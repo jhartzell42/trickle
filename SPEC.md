@@ -40,6 +40,8 @@ Basic operators:
     * Lists can also be used as queues
 * `.x` for indexing records with bareword `x` interpreted as field name
     * `.[x]` to interpret `x` as expression to get field name as string
+* `REMOVE x[y]` to remove a specific item from list or record
+    * Returns item
 * `<-` and `->` to move one item of data between streams
 * `$` converts a value or pattern to sender or receiver of single item
     * Value yields exactly itself
@@ -51,7 +53,10 @@ Basic operators:
     * Can be dangerous!
     * Otherwise, assigning a stream aliases the stream
         * Streams are only things that can be aliased!
-        * Everything else absolutely by value
+            * This seems weird -- streams should move by default?
+            * Maybe a "duplication" operator?
+            * Many streams are "pure", aliasing is fine
+        * Everything else absolutely by value/copy
 * Pattern operators:
     * Prefix `NUMBER` constrains a pattern to a number
     * Prefix `STRING` constrains a pattern to a string
