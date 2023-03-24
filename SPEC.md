@@ -1,7 +1,7 @@
 # An Idea for a PL
 
 1. Duck-typed (for now)
-2. Garbage-collected
+2. Garbage-collected (how does this even work?)
 3. Bytecode interpreted
 4. Implicitly multi-tasked (and multi-threaded?)
 
@@ -15,7 +15,7 @@ Data types:
 * `SomeIdentifier("values", 3, 4)`
     * Can be 0-ary and therefore just symbols
 * Streams: Generators/live blocks of code
-    * Handles on running tasks
+    * Serve as handles on running tasks
     * Many "functions" are live stream globals
     * Bidirectional
 
@@ -33,9 +33,10 @@ Basic operators:
 * Normal arithmetic operators
 * Tuple construction per above, as both constructor and pattern
 * `[1, 2, 3]` for list literals
-* `{ x: 1, y: 2, [string1 + string2]: 3 }` for dictionary literals and patterns
+* `[ x: 1, y: 2, [string1 + string2]: 3 ]` for dictionary literals and patterns
     * `x:` means key is `x`
     * `[x]:` means `x` is a string whose value should be the key
+    * Ordering is preserved, is list of `KeyValue(_,_)` tuples
 * `[]` for indexing lists
     * Lists can also be used as queues
 * `.x` for indexing records with bareword `x` interpreted as field name
@@ -49,7 +50,10 @@ Basic operators:
 * `(<- stream)` evaluates to one item of data out of stream
     * Parentheses unnecessary where unambiguous
 * `<--` and `-->` to stream indefinitely as new task
-* `!` creates a new stream that starts from the top of the code of the old stream
+* Prefix '&' creates an aliased stream
+    * By default, streams move
+* Prefix `*` copies a stream, restarting it
+    * Identity on non streams
     * Can be dangerous!
     * Otherwise, assigning a stream aliases the stream
         * Streams are only things that can be aliased!
@@ -57,12 +61,21 @@ Basic operators:
             * Maybe a "duplication" operator?
             * Many streams are "pure", aliasing is fine
         * Everything else absolutely by value/copy
+            * Including closure capture
 * Pattern operators:
     * Prefix `NUMBER` constrains a pattern to a number
     * Prefix `STRING` constrains a pattern to a string
     * Prefix `STREAM` constrains a pattern to a stream
     * `_` discards values
 * `%` is given special meaning within `{` ... `}` block
+
+Capture:
+* `STREAM` and `FOR&` create closures that capture variables
+    * Content variables are captured by copy
+    * Streams are captured by move by default
+        * Are we sure?
+    * Capture list in first line for streams:
+        * `*` to capture by copy, `&` to capture by alias, `!` for by move
 
 Basic statements:
 * `IMPORT` reads a library file into a dictionary
@@ -74,7 +87,7 @@ Basic statements:
 * Python-style significant whitespace
 * `pattern = value`
     * If pattern fails, end current task
-* `<-` and `->` combinations stand on their own as statements
+* Expressions can stand on their own as statements
 * `REPEAT:`
     * Actually expression that evaluates to whatever is passed to `BREAK`
     * If nothing passed to break, can't be used as expression
@@ -86,6 +99,8 @@ Basic statements:
 * `FOR $variable <- stream:`
     * Loop until stream is closed
     * Expression again returning value of `BREAK`
+* `FOR& $variable <- stream:`
+    * Does not wait for previous to run next
 * `IF $variable <- stream:` ... `ELSE:`
     * Run inner block if stream has more to give.
     * If stream is closed in that direction, run `ELSE` block if any
@@ -106,8 +121,7 @@ Basic statements:
     * Further writes from other side cause task to end
 * DONE ALL stream
     * Both! :-)
-* STOP stream
-    * Nix the task on the other side of this stream. Good fun!
+    * Nixes the task on the other side of this stream. Good fun!
     * Especially useful for using with `<--`
 
 When you have a running stream, you can send it messages:
@@ -168,7 +182,7 @@ incrementing_stream = STREAM:
     @console <- "Hello"
     FOR $in <- IN:
         OUT <- $(in + 1)
-incrementing_stream = incrementing_stream!     # Outputs "hello" again
+incrementing_stream = *incrementing_stream     # Outputs "hello" again
 @console <- incrementing_stream <- $5          # Outputs "6"
 incrementing_stream <-- [0, 1, 2, 3, 4, 5, 6]
 @console <-- incrementing_stream  # outputs lines counting from 1 through 7
