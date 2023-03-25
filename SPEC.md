@@ -12,7 +12,7 @@ Data types:
 * Strings
 * Lists
 * Dictionaries (called records)
-* `SomeIdentifier("values", 3, 4)`
+* Labeled tuples: `SomeIdentifier("values", 3, 4)`
     * Can be 0-ary and therefore just symbols
 * Streams: Generators/live blocks of code
     * Serve as handles on running tasks
@@ -24,19 +24,22 @@ Identifier types:
 * Variables are `snake_case`
 * `@lower_snake` for built-in streams and code blocks
     * Basically imagine its short for `PROLOG.`
-* Streams have bare names in `<-` expressions
-    * Are otherwise normal variables
-    * Same namespace
+    * Because `PROLOG` is captured by copy, streams are captured by copy
 * Code blocks can only be instantiated
 
 Basic operators:
 * Normal arithmetic operators
+* `true` and `false` boolean literals and normal operators
 * Tuple construction per above, as both constructor and pattern
-* `[1, 2, 3]` for list literals
+* `[1, 2, 3]` for list literals (and patterns), `...` for "rest"
 * `[ x: 1, y: 2, [string1 + string2]: 3 ]` for dictionary literals and patterns
+    * `...` for rest
     * `x:` means key is `x`
     * `[x]:` means `x` is a string whose value should be the key
-    * Ordering is preserved, is list of `KeyValue(_,_)` tuples
+    * Ordering is preserved
+        * As stream, gives `KeyValue(_,_)` tuples in original order
+        * Inputting into it changes in other direction
+    * Out of order ordering is allowed for patterns
 * `[]` for indexing lists
     * Lists can also be used as queues
 * `.x` for indexing records with bareword `x` interpreted as field name
@@ -45,14 +48,16 @@ Basic operators:
     * Returns item
 * `<-` and `->` to move one item of data between streams
 * `$` converts a value or pattern to sender or receiver of single item
-    * Value yields exactly itself
+    * Value yields exactly itself, re-evaluating expression each time
+        * Re-evaluating is only relevant for streams
+        * Capture by move for streams by default
     * Pattern can set exactly itself as well
 * `(<- stream)` evaluates to one item of data out of stream
     * Parentheses unnecessary where unambiguous
 * `<--` and `-->` to stream indefinitely as new task
 * Prefix '&' creates an aliased stream
-    * By default, streams move
-* Prefix `*` copies a stream, restarting it
+    * Consumers compete for values
+* Prefix `*` copies a stream
     * Identity on non streams
     * Can be dangerous!
     * Otherwise, assigning a stream aliases the stream
@@ -73,9 +78,6 @@ Capture:
 * `STREAM` and `FOR&` create closures that capture variables
     * Content variables are captured by copy
     * Streams are captured by move by default
-        * Are we sure?
-    * Capture list in first line for streams:
-        * `*` to capture by copy, `&` to capture by alias, `!` for by move
 
 Basic statements:
 * `IMPORT` reads a library file into a dictionary
@@ -111,15 +113,15 @@ Basic statements:
     * `IF cond:` ... `ELIF cond:` ... `ELSE:`
     * `MATCH value:` ... `ON pattern:` ... `ON pattern:`
     * `STREAM`, `{` ... `}`
-* DONE WRITING stream
+* STOP WRITING stream
     * Terminates any `FOR` loops waiting for the stream
     * Further reads from other side will cause task to end
     * Further writes to this stream cause task to end
-* DONE READING stream
+* STOP READING stream
     * Promise never to read from again
     * Further reads from this stream cause task to end
     * Further writes from other side cause task to end
-* DONE ALL stream
+* STOP stream
     * Both! :-)
     * Nixes the task on the other side of this stream. Good fun!
     * Especially useful for using with `<--`
@@ -189,8 +191,11 @@ incrementing_stream <-- [0, 1, 2, 3, 4, 5, 6]
 ```
 
 If you write `{` ... `}` instead of `STREAM`, you can have implied the
-`FOR $in <- IN`, except for with the special variable `%`, and the last
-statement is an expression interpreted as sent to `OUT`. So:
+`FOR $in <- IN` -- except for with the special variable `%` instead of
+`in` -- and the last statement is an expression interpreted as sent to
+`OUT`. `{&` ... `}` similarly implies `FOR&`.
+
+So:
 
 ```
 incrementing_stream = { % + 1 }
@@ -284,10 +289,11 @@ hold = $STREAM: # `$` + value makes constant output stream
 Another attempted implementation:
 
 ```
-hold = $STREAM:
-    process = None
+hold = ${
+    BEGIN: process = None
     for $value <- IN:
         IF Some(process) = process:
             STOP process
         process = Some(OUT <-- $value)
+}
 ```
