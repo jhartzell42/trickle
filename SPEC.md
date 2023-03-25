@@ -25,6 +25,7 @@ Identifier types:
 * `@lower_snake` for built-in streams and code blocks
     * Basically imagine its short for `PROLOG.`
     * Because `PROLOG` is captured by copy, streams are captured by copy
+        * ... This seems mildly absurd
 * Code blocks can only be instantiated
 
 Basic operators:
@@ -57,16 +58,9 @@ Basic operators:
 * `<--` and `-->` to stream indefinitely as new task
 * Prefix '&' creates an aliased stream
     * Consumers compete for values
+    * Default is move, even with capture involved
 * Prefix `*` copies a stream
-    * Identity on non streams
-    * Can be dangerous!
-    * Otherwise, assigning a stream aliases the stream
-        * Streams are only things that can be aliased!
-            * This seems weird -- streams should move by default?
-            * Maybe a "duplication" operator?
-            * Many streams are "pure", aliasing is fine
-        * Everything else absolutely by value/copy
-            * Including closure capture
+    * Do we need this?
 * Pattern operators:
     * Prefix `NUMBER` constrains a pattern to a number
     * Prefix `STRING` constrains a pattern to a string
@@ -80,13 +74,13 @@ Capture:
     * Streams are captured by move by default
 
 Basic statements:
+* Python-style significant whitespace
 * `IMPORT` reads a library file into a dictionary
     * Can use `as` to name dictionary different
     * Can use `into` to fill an existing dictionary
         * e.g. `into PROLOG` to fill up `@`s
     * `PROLOG` is auto-read-in, and normally referred to by `@`
         * Contains built-ins
-* Python-style significant whitespace
 * `pattern = value`
     * If pattern fails, end current task
 * Expressions can stand on their own as statements
