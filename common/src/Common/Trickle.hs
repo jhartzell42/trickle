@@ -8,32 +8,29 @@ module Common.Trickle
 import qualified Text.Parsec as Parsec
 import Data.Char (isLetter)
 import qualified Data.Text as T
-import qualified Data.Text.Encoding as T
-import Text.Parsec (<?>)
-import Control.Applicative
-import Control.Monad.Identity (Identity)
+import Control.Monad
 
 data Program = Program VariableName
     deriving Show
 
-program :: Parsec.Parse T.Text () Program
+program :: Parsec.Parsec T.Text () Program
 program = Program <$> variableName
 
 data VariableName = VariableName
     { variableReferenceSigils :: [VariableSigil]
-    , variableName :: T.Text
+    , variableIdentifier :: T.Text
     }
     deriving Show
 
-variableName :: Parsec.Parse T.Text () VariableName
-variableName = VariableName <$> many1 variableSigil <*> lowerCamelCase
+variableName :: Parsec.Parsec T.Text () VariableName
+variableName = VariableName <$> Parsec.many1 variableSigil <*> lowerCamelCase
 
-lowerCamelCase :: Parsec.Parse T.Text () T.Text
-lowerCamelCase = T.pack $ do
-    s <- Parsec.many1 $ choice
-        [ letter
-        , char '_'
-        , digit
+lowerCamelCase :: Parsec.Parsec T.Text () T.Text
+lowerCamelCase = fmap T.pack $ do
+    s <- Parsec.many1 $ Parsec.choice
+        [ Parsec.letter
+        , Parsec.char '_'
+        , Parsec.digit
         ]
     guard $ isLetter $ head s
     pure s
@@ -46,14 +43,14 @@ data VariableSigil
     | VariableSigilEvent
     deriving Show
 
-variableSigil :: Parsec.Parse T.Text () VariableSigil
-variableSigil = choice
-    [ VariableSigilPure <$ char '$'
-    , VariableSigilWidget <$ char '@'
-    , VariableSigilOptional <$ char '?'
-    , VariableSigilDynamic <$ char '%'
-    , VariableSigilEvent <$ char '!'
+variableSigil :: Parsec.Parsec T.Text () VariableSigil
+variableSigil = Parsec.choice
+    [ VariableSigilPure <$ Parsec.char '$'
+    , VariableSigilWidget <$ Parsec.char '@'
+    , VariableSigilOptional <$ Parsec.char '?'
+    , VariableSigilDynamic <$ Parsec.char '%'
+    , VariableSigilEvent <$ Parsec.char '!'
     ]
 
-parseProgram :: T.Text -> Program
-parseProgram text = Parsec.parse program "(source)"
+parseProgram :: T.Text -> Either Parsec.ParseError Program
+parseProgram text = Parsec.parse program "(source)" text
