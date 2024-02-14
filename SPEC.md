@@ -128,6 +128,9 @@ fn @%Count(!event) {
     !new_number = !<@dyn + 1>!event
     %dyn <- @%<0>!new_number
     return %dyn
+
+    // One-line way of writing it:
+    %dyn <- @%<0>!<@dyn + 1>!event
 }
 
 %count <- @%Count(!some_event)   // %count contains how many times event fired
